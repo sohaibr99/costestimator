@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f4ee;
+  --foreground: #171717;
+  --muted: #efe7db;
+  --card: #fffaf2;
+  --card-foreground: #171717;
+  --primary: #1f3b2c;
+  --primary-foreground: #ffffff;
+  --secondary: #d7c6a4;
+  --secondary-foreground: #171717;
+  --accent: #8f6b3b;
+  --accent-foreground: #ffffff;
+  --border: rgba(31, 59, 44, 0.12);
+  --input: rgba(31, 59, 44, 0.18);
+  --ring: #1f3b2c;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  background:
+    radial-gradient(circle at top left, rgba(31, 59, 44, 0.12), transparent 30%),
+    linear-gradient(180deg, #fcfbf7 0%, #f7f4ee 100%);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
