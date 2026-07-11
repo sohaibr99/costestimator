@@ -289,7 +289,14 @@ export default function ProjectLedgerPage() {
 
       <ProjectSummary />
       <CostChart transactions={transactions} />
-      <TransactionTable />
+      
+      {/* Mobile-Swipeable Wrapper for the Transaction Table */}
+      <div className="w-full overflow-x-auto pb-4">
+        <div className="min-w-[800px]">
+          <TransactionTable />
+        </div>
+      </div>
+
     </main>
   );
 }
