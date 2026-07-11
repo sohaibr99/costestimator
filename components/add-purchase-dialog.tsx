@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, Receipt } from "lucide-react";
 import { MaterialCombobox, type MaterialSelection, type MaterialCatalogOption } from "@/components/material-combobox";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -41,7 +41,7 @@ export function AddPurchaseDialog({ projectId, materials, triggerLabel = "Add Pu
     setQuantity("");
     setUnitPrice("");
     setVendorName("");
-    setPhase("Grey Structure"); // Resets the modal's internal state for the next time it opens
+    setPhase("Grey Structure"); 
     setTransactionDate(new Date().toISOString().slice(0, 10));
     setCustomUnit("");
     setNotes("");
@@ -76,13 +76,13 @@ export function AddPurchaseDialog({ projectId, materials, triggerLabel = "Add Pu
       customUnit: selection.mode === "custom" ? customUnit.trim() : selection.materialUnit,
       materialName: selection.materialName,
       materialUnit: selection.mode === "custom" ? customUnit.trim() : selection.materialUnit,
-      category: selection.category, // Retains the original catalog category
+      category: selection.category,
       quantity: quantityValue,
       unitPrice: unitPriceValue,
       vendorName: vendorName.trim(),
       transactionDate,
       notes: notes.trim(),
-      phase: phase, // Successfully attaches the user-selected phase
+      phase: phase,
     });
     
     setIsSubmitting(false);
@@ -98,41 +98,56 @@ export function AddPurchaseDialog({ projectId, materials, triggerLabel = "Add Pu
 
   return (
     <>
-      <Button onClick={() => setOpen(true)} className="gap-2">
+      <Button 
+        onClick={() => setOpen(true)} 
+        className="h-11 w-full gap-2 rounded-xl bg-emerald-700 text-white hover:bg-emerald-800 sm:w-auto"
+      >
         <Plus className="h-4 w-4" />
         {triggerLabel}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add purchase</DialogTitle>
-            <DialogDescription>Record a material transaction and set the construction phase.</DialogDescription>
+        <DialogContent className="w-[95vw] max-w-[500px] overflow-hidden rounded-[2rem] p-6 sm:p-8">
+          <DialogHeader className="text-left">
+            <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+              <Receipt className="h-6 w-6" />
+            </div>
+            <DialogTitle className="text-2xl font-bold text-slate-900">Add Purchase</DialogTitle>
+            <DialogDescription className="text-slate-500">
+              Record a material transaction and set the construction phase.
+            </DialogDescription>
           </DialogHeader>
 
-          <form className="space-y-5" onSubmit={handleSubmit}>
-            {/* Phase Toggle */}
-            <div className="grid grid-cols-2 gap-2 p-1 bg-muted rounded-xl">
-              <Button 
-                type="button" 
-                variant={phase === "Grey Structure" ? "default" : "ghost"} 
+          <form className="mt-2 space-y-5" onSubmit={handleSubmit}>
+            
+            {/* Custom Segmented Phase Toggle */}
+            <div className="flex rounded-xl bg-slate-100 p-1">
+              <button
+                type="button"
                 onClick={() => setPhase("Grey Structure")}
-                className="shadow-sm"
+                className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${
+                  phase === "Grey Structure" 
+                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50" 
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
               >
                 Grey Structure
-              </Button>
-              <Button 
-                type="button" 
-                variant={phase === "Finishing" ? "default" : "ghost"} 
+              </button>
+              <button
+                type="button"
                 onClick={() => setPhase("Finishing")}
-                className="shadow-sm"
+                className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${
+                  phase === "Finishing" 
+                    ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50" 
+                    : "text-slate-500 hover:text-slate-900"
+                }`}
               >
                 Finishing
-              </Button>
+              </button>
             </div>
 
             <div className="space-y-2">
-              <Label>Material</Label>
+              <Label className="text-xs font-semibold uppercase tracking-wider text-slate-500">Material</Label>
               <MaterialCombobox 
                 materials={materials} 
                 value={selection} 
@@ -141,40 +156,91 @@ export function AddPurchaseDialog({ projectId, materials, triggerLabel = "Add Pu
               />
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity</Label>
-                <Input id="quantity" type="number" min="0" step="0.01" value={quantity} onChange={(event) => setQuantity(event.target.value)} placeholder="0" />
+                <Label htmlFor="quantity" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Quantity</Label>
+                <Input 
+                  id="quantity" 
+                  type="number" 
+                  min="0" 
+                  step="0.01" 
+                  value={quantity} 
+                  onChange={(event) => setQuantity(event.target.value)} 
+                  placeholder="0" 
+                  className="h-12 rounded-xl bg-slate-50 focus-visible:ring-emerald-500"
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="unit-price">Unit price</Label>
-                <Input id="unit-price" type="number" min="0" step="0.01" value={unitPrice} onChange={(event) => setUnitPrice(event.target.value)} placeholder="0.00" />
+                <Label htmlFor="unit-price" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Unit price</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">Rs</span>
+                  <Input 
+                    id="unit-price" 
+                    type="number" 
+                    min="0" 
+                    step="0.01" 
+                    value={unitPrice} 
+                    onChange={(event) => setUnitPrice(event.target.value)} 
+                    placeholder="0.00" 
+                    className="h-12 rounded-xl bg-slate-50 pl-9 focus-visible:ring-emerald-500"
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="vendor-name">Vendor name</Label>
-                <Input id="vendor-name" value={vendorName} onChange={(event) => setVendorName(event.target.value)} />
+                <Label htmlFor="vendor-name" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Vendor name</Label>
+                <Input 
+                  id="vendor-name" 
+                  value={vendorName} 
+                  onChange={(event) => setVendorName(event.target.value)} 
+                  className="h-12 rounded-xl bg-slate-50 focus-visible:ring-emerald-500"
+                  placeholder="e.g. Ali Hardware"
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="transaction-date">Date</Label>
-                <Input id="transaction-date" type="date" value={transactionDate} onChange={(event) => setTransactionDate(event.target.value)} />
+                <Label htmlFor="transaction-date" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Date</Label>
+                <Input 
+                  id="transaction-date" 
+                  type="date" 
+                  value={transactionDate} 
+                  onChange={(event) => setTransactionDate(event.target.value)} 
+                  className="h-12 rounded-xl bg-slate-50 focus-visible:ring-emerald-500"
+                />
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border bg-muted/35 p-4">
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-foreground/65">Line total preview</span>
-                <span className="text-lg font-semibold">{lineTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}</span>
+                <span className="font-medium text-emerald-800">Line total preview</span>
+                <span className="text-lg font-bold text-emerald-900">
+                  Rs {lineTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </span>
               </div>
             </div>
 
-            {error ? <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div> : null}
+            {error ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            ) : null}
 
-            <DialogFooter>
-              <Button type="submit" disabled={isSubmitting} className="w-full bg-emerald-900 text-white hover:bg-emerald-800">
-                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save purchase"}
+            <DialogFooter className="mt-6 flex-col gap-2 sm:flex-row sm:justify-end">
+               <Button
+                type="button"
+                variant="outline"
+                onClick={() => setOpen(false)}
+                className="h-12 w-full rounded-xl border-slate-200 bg-white sm:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                disabled={isSubmitting} 
+                className="h-12 w-full rounded-xl bg-emerald-700 text-white hover:bg-emerald-800 sm:w-auto"
+              >
+                {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Save purchase"}
               </Button>
             </DialogFooter>
           </form>
