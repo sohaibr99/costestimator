@@ -107,7 +107,7 @@ export function AddPurchaseDialog({ projectId, materials, triggerLabel = "Add Pu
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[95vw] max-w-[500px] overflow-hidden rounded-[2rem] p-6 sm:p-8">
+        <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] overflow-y-auto rounded-[2rem] p-6 sm:p-8">
           <DialogHeader className="text-left">
             <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
               <Receipt className="h-6 w-6" />
