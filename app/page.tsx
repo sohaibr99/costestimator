@@ -1,75 +1,63 @@
+"use client";
+
+import * as React from "react";
 import Link from "next/link";
-import { Calculator, BarChart3, HardHat } from "lucide-react";
+import { ArrowRight, BarChart3, Building2, ShieldCheck, HardHat } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl items-center px-4 py-12 sm:px-6 lg:px-8">
-      <section className="grid w-full gap-10 overflow-hidden rounded-[2.5rem] border border-border bg-card/95 p-8 shadow-[0_30px_80px_rgba(31,59,44,0.08)] backdrop-blur sm:p-12 lg:grid-cols-2 lg:items-center">
+    <main className="relative flex min-h-screen flex-col items-center overflow-hidden bg-slate-50">
+      {/* Premium Technical Background Pattern */}
+      <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
+      <div className="absolute left-0 right-0 top-0 z-0 h-96 bg-gradient-to-b from-emerald-50/50 to-transparent"></div>
+
+      {/* Hero Section */}
+      <div className="relative z-10 flex w-full max-w-5xl flex-col items-center justify-center px-6 pt-24 text-center sm:pt-32 lg:px-8">
+        <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-emerald-200/50 bg-white/60 px-4 py-1.5 text-sm font-semibold text-emerald-800 shadow-sm backdrop-blur-md">
+          <HardHat className="h-4 w-4" />
+          <span>Professional Ledger Systems</span>
+        </div>
         
-        {/* Left Column: Hero Copy */}
-        <div className="space-y-8 lg:pr-8">
-          <span className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-900">
-            Enterprise Grade
+        <h1 className="max-w-4xl text-5xl font-extrabold tracking-tight text-slate-900 sm:text-6xl md:text-7xl lg:text-8xl">
+          Built for <br className="hidden sm:block" />
+          <span className="bg-gradient-to-r from-emerald-700 to-teal-600 bg-clip-text text-transparent">
+            absolute accuracy.
           </span>
-          <div className="space-y-5">
-            <h1 className="text-4xl font-semibold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-              Master Your Construction Costs
-            </h1>
-            <p className="max-w-xl text-base leading-relaxed text-foreground/70 sm:text-lg">
-              A comprehensive project ledger and estimating platform designed for contractors. Track budgets, log material purchases, and protect your profit margins with precision.
-            </p>
-          </div>
-          <div className="pt-2">
-            <Link
-              className="inline-flex h-14 items-center justify-center rounded-xl bg-emerald-900 px-8 text-base font-medium text-white transition-colors hover:bg-emerald-800 shadow-sm"
-              href="/login?next=/projects"
-            >
-              Sign In to Dashboard
+        </h1>
+        
+        <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-slate-600 sm:text-xl">
+          The ultimate platform to track multi-tenant construction projects, manage heavy equipment costs, and keep your materials ledger perfectly synchronized.
+        </p>
+
+        <div className="mt-10 flex w-full flex-col items-center justify-center gap-4 sm:flex-row">
+          <Button asChild size="lg" className="h-14 w-full rounded-xl bg-emerald-700 px-8 text-base shadow-lg hover:bg-emerald-800 sm:w-auto">
+            <Link href="/login">
+              Access Workspace <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
-          </div>
+          </Button>
+          <Button asChild variant="outline" size="lg" className="h-14 w-full rounded-xl border-slate-200 bg-white px-8 text-base shadow-sm hover:bg-slate-50 sm:w-auto">
+            <Link href="/login">View Live Projects</Link>
+          </Button>
         </div>
+      </div>
 
-        {/* Right Column: Professional Features */}
-        <div className="grid gap-5 rounded-[2rem] bg-muted/40 p-6 lg:p-8 border border-border/50">
-          
-          <div className="group flex items-start gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm transition-all hover:shadow-md hover:border-emerald-500/30">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-900 group-hover:bg-emerald-100 transition-colors">
-              <Calculator className="h-6 w-6" />
+      {/* Responsive Feature Grid */}
+      <div className="relative z-10 mx-auto mt-20 grid w-full max-w-6xl gap-6 px-6 pb-24 sm:grid-cols-2 lg:grid-cols-3 lg:px-8">
+        {[
+          { icon: Building2, title: "Multi-Tenant Sites", desc: "Isolate and manage distinct ledgers for different construction zones." },
+          { icon: BarChart3, title: "Real-Time Costing", desc: "Instantly calculate weighted averages and material run rates." },
+          { icon: ShieldCheck, title: "Secure Infrastructure", desc: "Enterprise-grade data protection powered by Supabase authentication." }
+        ].map((feature, i) => (
+          <div key={i} className="flex flex-col rounded-3xl border border-slate-200/60 bg-white/80 p-8 shadow-sm backdrop-blur-xl transition-all hover:shadow-md">
+            <div className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+              <feature.icon className="h-6 w-6" />
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-foreground">Precision Estimating</h3>
-              <p className="mt-2 text-sm leading-relaxed text-foreground/65">
-                Calculate weighted averages and real-time unit costs instantly as market prices fluctuate.
-              </p>
-            </div>
+            <h3 className="mb-3 text-xl font-bold text-slate-900">{feature.title}</h3>
+            <p className="text-base leading-relaxed text-slate-600">{feature.desc}</p>
           </div>
-
-          <div className="group flex items-start gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm transition-all hover:shadow-md hover:border-emerald-500/30">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-900 group-hover:bg-emerald-100 transition-colors">
-              <HardHat className="h-6 w-6" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-foreground">Centralized Ledgers</h3>
-              <p className="mt-2 text-sm leading-relaxed text-foreground/65">
-                Manage materials, vendor transactions, and daily logs across multiple active sites from one hub.
-              </p>
-            </div>
-          </div>
-
-          <div className="group flex items-start gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm transition-all hover:shadow-md hover:border-emerald-500/30">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-900 group-hover:bg-emerald-100 transition-colors">
-              <BarChart3 className="h-6 w-6" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-foreground">Budget Protection</h3>
-              <p className="mt-2 text-sm leading-relaxed text-foreground/65">
-                Identify cost overruns before they happen with live financial tracking and smart analytics.
-              </p>
-            </div>
-          </div>
-
-        </div>
-      </section>
+        ))}
+      </div>
     </main>
   );
 }
