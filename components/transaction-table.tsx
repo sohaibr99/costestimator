@@ -63,8 +63,10 @@ export function TransactionTable() {
         <CardTitle>Material ledger</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="overflow-hidden rounded-2xl border border-border">
-          <table className="w-full text-sm">
+        {/* Changed overflow-hidden to overflow-x-auto to enable horizontal scrolling on mobile */}
+        <div className="overflow-x-auto rounded-2xl border border-border">
+          {/* Added min-w-[800px] to force the table to stay wide enough to require scrolling */}
+          <table className="min-w-[800px] w-full text-sm">
             <thead className="bg-muted/60 text-left text-xs uppercase tracking-[0.16em] text-foreground/55">
               <tr>
                 <th className="px-4 py-3">Date</th>
