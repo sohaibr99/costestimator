@@ -12,7 +12,14 @@ export function getSupabaseBrowserClient() {
   }
 
   if (!browserClient) {
-    browserClient = createBrowserClient<Database>(url, anonKey);
+    browserClient = createBrowserClient<Database>(url, anonKey, {
+      cookieOptions: {
+        // This tells the browser to keep you logged in for 30 days (in seconds)
+        maxAge: 2592000,
+        path: "/",
+        sameSite: "lax",
+      },
+    });
   }
 
   return browserClient;
