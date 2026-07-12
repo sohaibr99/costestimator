@@ -33,7 +33,7 @@ export function VendorDashboard() {
     setIsModalOpen(true);
   };
 
-  const handleOpenEdit = (order: VendorOrderRecord) => {
+  const handleOpenEdit = (order: any) => {
     setEditingOrder(order);
     setVendorName(order.vendorName);
     setMaterial(order.material);
