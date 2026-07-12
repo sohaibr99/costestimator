@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, AlertTriangle, Trash2 } from "lucide-react";
 import { CostChart } from "@/components/cost-chart";
+import { VendorDashboard } from "@/components/vendor-dashboard";
 import { AddPurchaseDialog } from "@/components/add-purchase-dialog";
 import { ProjectSummary } from "@/components/project-summary";
 import { TransactionTable } from "@/components/transaction-table";
@@ -287,8 +288,11 @@ export default function ProjectLedgerPage() {
         <div className="text-sm text-foreground/55">Loading material catalog...</div>
       ) : null}
 
-      <ProjectSummary />
-      <CostChart transactions={transactions} />
+<ProjectSummary />
+      <CostChart />
+      
+      {/* THIS IS THE MISSING PIECE */}
+      <VendorDashboard />
       
       {/* Mobile-Swipeable Wrapper for the Transaction Table */}
       <div className="w-full overflow-x-auto pb-4">
