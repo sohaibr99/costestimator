@@ -22,8 +22,12 @@ export function AddPurchaseDialog({ projectId, materials, triggerLabel = "Add Pu
   const [phase, setPhase] = React.useState<"Grey Structure" | "Finishing">("Grey Structure");
   
   const [selection, setSelection] = React.useState<MaterialSelection | null>(null);
+  
+  // New independent states for the 3-way calculation
   const [quantity, setQuantity] = React.useState("");
   const [unitPrice, setUnitPrice] = React.useState("");
+  const [totalPrice, setTotalPrice] = React.useState("");
+  
   const [vendorName, setVendorName] = React.useState("");
   const [transactionDate, setTransactionDate] = React.useState(new Date().toISOString().slice(0, 10));
   const [customUnit, setCustomUnit] = React.useState("");
@@ -31,14 +35,52 @@ export function AddPurchaseDialog({ projectId, materials, triggerLabel = "Add Pu
   const [error, setError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const quantityValue = Number(quantity);
-  const unitPriceValue = Number(unitPrice);
-  const lineTotal = Number.isFinite(quantityValue) && Number.isFinite(unitPriceValue) ? quantityValue * unitPriceValue : 0;
+  // --- Auto-Calculation Logic ---
+  const handleQuantityChange = (val: string) => {
+    setQuantity(val);
+    const q = Number(val);
+    const u = Number(unitPrice);
+    const t = Number(totalPrice);
+    
+    if (val === "" || q === 0) return;
+    
+    if (u > 0) {
+      // If we have a unit price, calculate total
+      setTotalPrice((q * u).toFixed(2));
+    } else if (t > 0) {
+      // If we only have a total, calculate unit price
+      setUnitPrice((t / q).toFixed(2));
+    }
+  };
+
+  const handleUnitPriceChange = (val: string) => {
+    setUnitPrice(val);
+    const u = Number(val);
+    const q = Number(quantity);
+    
+    if (val === "" || u === 0 || q === 0) return;
+    
+    // Auto-calculate total
+    setTotalPrice((q * u).toFixed(2));
+  };
+
+  const handleTotalPriceChange = (val: string) => {
+    setTotalPrice(val);
+    const t = Number(val);
+    const q = Number(quantity);
+    
+    if (val === "" || t === 0 || q === 0) return;
+    
+    // Auto-calculate unit price
+    setUnitPrice((t / q).toFixed(2));
+  };
+  // ------------------------------
 
   const resetForm = React.useCallback(() => {
     setSelection(null);
     setQuantity("");
     setUnitPrice("");
+    setTotalPrice("");
     setVendorName("");
     setPhase("Grey Structure"); 
     setTransactionDate(new Date().toISOString().slice(0, 10));
@@ -50,6 +92,9 @@ export function AddPurchaseDialog({ projectId, materials, triggerLabel = "Add Pu
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
+
+    const quantityValue = Number(quantity);
+    const unitPriceValue = Number(unitPrice);
 
     if (!selection) {
       setError("Select a material first.");
@@ -106,10 +151,8 @@ export function AddPurchaseDialog({ projectId, materials, triggerLabel = "Add Pu
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        {/* We use flex layout to pin the header and footer, allowing ONLY the center content to scroll */}
         <DialogContent className="flex max-h-[90vh] w-[95vw] max-w-[500px] flex-col overflow-hidden rounded-[2rem] p-0 sm:p-0">
           
-          {/* Header - Pinned at top */}
           <div className="flex-shrink-0 px-6 pt-6 sm:px-8 sm:pt-8">
             <DialogHeader className="text-left">
               <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
@@ -117,12 +160,11 @@ export function AddPurchaseDialog({ projectId, materials, triggerLabel = "Add Pu
               </div>
               <DialogTitle className="text-2xl font-bold text-slate-900">Add Purchase</DialogTitle>
               <DialogDescription className="text-slate-500">
-                Record a material transaction and set the construction phase.
+                Enter quantity and either unit price OR total price.
               </DialogDescription>
             </DialogHeader>
           </div>
 
-          {/* Form - Scrollable middle section */}
           <div className="flex-1 overflow-y-auto px-6 py-4 sm:px-8">
             <form id="purchase-form" className="space-y-5" onSubmit={handleSubmit}>
               
@@ -131,9 +173,7 @@ export function AddPurchaseDialog({ projectId, materials, triggerLabel = "Add Pu
                   type="button"
                   onClick={() => setPhase("Grey Structure")}
                   className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${
-                    phase === "Grey Structure" 
-                      ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50" 
-                      : "text-slate-500 hover:text-slate-900"
+                    phase === "Grey Structure" ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50" : "text-slate-500 hover:text-slate-900"
                   }`}
                 >
                   Grey Structure
@@ -142,9 +182,7 @@ export function AddPurchaseDialog({ projectId, materials, triggerLabel = "Add Pu
                   type="button"
                   onClick={() => setPhase("Finishing")}
                   className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${
-                    phase === "Finishing" 
-                      ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50" 
-                      : "text-slate-500 hover:text-slate-900"
+                    phase === "Finishing" ? "bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50" : "text-slate-500 hover:text-slate-900"
                   }`}
                 >
                   Finishing
@@ -161,35 +199,31 @@ export function AddPurchaseDialog({ projectId, materials, triggerLabel = "Add Pu
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              {/* 3-Way Auto Calculating Grid */}
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="quantity" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Quantity</Label>
+                  <Label htmlFor="quantity" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Qty</Label>
                   <Input 
-                    id="quantity" 
-                    type="number" 
-                    min="0" 
-                    step="0.01" 
-                    value={quantity} 
-                    onChange={(event) => setQuantity(event.target.value)} 
-                    placeholder="0" 
-                    className="h-12 rounded-xl bg-slate-50 focus-visible:ring-emerald-500"
+                    id="quantity" type="number" min="0" step="0.01" 
+                    value={quantity} onChange={(e) => handleQuantityChange(e.target.value)} 
+                    placeholder="0" className="h-12 rounded-xl bg-slate-50 focus-visible:ring-emerald-500"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="unit-price" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Unit price</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">Rs</span>
-                    <Input 
-                      id="unit-price" 
-                      type="number" 
-                      min="0" 
-                      step="0.01" 
-                      value={unitPrice} 
-                      onChange={(event) => setUnitPrice(event.target.value)} 
-                      placeholder="0.00" 
-                      className="h-12 rounded-xl bg-slate-50 pl-9 focus-visible:ring-emerald-500"
-                    />
-                  </div>
+                  <Label htmlFor="unit-price" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Unit (Rs)</Label>
+                  <Input 
+                    id="unit-price" type="number" min="0" step="0.01" 
+                    value={unitPrice} onChange={(e) => handleUnitPriceChange(e.target.value)} 
+                    placeholder="0.00" className="h-12 rounded-xl bg-slate-50 focus-visible:ring-emerald-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="total-price" className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Total (Rs)</Label>
+                  <Input 
+                    id="total-price" type="number" min="0" step="0.01" 
+                    value={totalPrice} onChange={(e) => handleTotalPriceChange(e.target.value)} 
+                    placeholder="0.00" className="h-12 rounded-xl bg-emerald-50/50 border-emerald-200 focus-visible:ring-emerald-500"
+                  />
                 </div>
               </div>
 
@@ -197,59 +231,31 @@ export function AddPurchaseDialog({ projectId, materials, triggerLabel = "Add Pu
                 <div className="space-y-2">
                   <Label htmlFor="vendor-name" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Vendor name</Label>
                   <Input 
-                    id="vendor-name" 
-                    value={vendorName} 
-                    onChange={(event) => setVendorName(event.target.value)} 
-                    className="h-12 rounded-xl bg-slate-50 focus-visible:ring-emerald-500"
-                    placeholder="e.g. Ali Hardware"
+                    id="vendor-name" value={vendorName} onChange={(e) => setVendorName(e.target.value)} 
+                    className="h-12 rounded-xl bg-slate-50 focus-visible:ring-emerald-500" placeholder="e.g. Ali Hardware"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="transaction-date" className="text-xs font-semibold uppercase tracking-wider text-slate-500">Date</Label>
                   <Input 
-                    id="transaction-date" 
-                    type="date" 
-                    value={transactionDate} 
-                    onChange={(event) => setTransactionDate(event.target.value)} 
+                    id="transaction-date" type="date" value={transactionDate} onChange={(e) => setTransactionDate(e.target.value)} 
                     className="h-12 rounded-xl bg-slate-50 focus-visible:ring-emerald-500"
                   />
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-emerald-800">Line total preview</span>
-                  <span className="text-lg font-bold text-emerald-900">
-                    Rs {lineTotal.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                  </span>
-                </div>
-              </div>
-
               {error ? (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {error}
-                </div>
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
               ) : null}
             </form>
           </div>
 
-          {/* Footer - Pinned at bottom */}
           <div className="flex-shrink-0 border-t border-slate-100 bg-slate-50/50 px-6 py-4 sm:px-8">
             <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-               <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(false)}
-                className="h-12 w-full rounded-xl border-slate-200 bg-white sm:w-auto"
-              >
+               <Button type="button" variant="outline" onClick={() => setOpen(false)} className="h-12 w-full rounded-xl border-slate-200 bg-white sm:w-auto">
                 Cancel
               </Button>
-              <Button 
-                type="submit" 
-                form="purchase-form"
-                disabled={isSubmitting} 
-                className="h-12 w-full rounded-xl bg-emerald-700 text-white hover:bg-emerald-800 sm:w-auto"
-              >
+              <Button type="submit" form="purchase-form" disabled={isSubmitting} className="h-12 w-full rounded-xl bg-emerald-700 text-white hover:bg-emerald-800 sm:w-auto">
                 {isSubmitting ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : "Save purchase"}
               </Button>
             </DialogFooter>
