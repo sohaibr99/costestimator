@@ -9,6 +9,18 @@ import type {
   MaterialsCatalogRow,
 } from "@/types/database";
 
+export interface VendorOrderRecord {
+  id: string;
+  projectId: string;
+  vendorName: string;
+  material: string;
+  unit: string;
+  orderedQty: number;
+  receivedQty: number;
+  amountPaid: number;
+  createdAt: string;
+}
+
 export interface CatalogOption {
   id: string;
   category: string;
@@ -45,6 +57,7 @@ export interface ProjectRecord {
   status: "active" | "completed" | "archived";
   createdAt: string;
   updatedAt: string;
+  categoryBudgets: Record<string, number>;
 }
 
 export interface MaterialSummary {
@@ -61,6 +74,7 @@ export interface MaterialSummary {
 interface ProjectState {
   activeProject: ProjectRecord | null;
   transactions: MaterialTransactionRecord[];
+  vendorOrders: VendorOrderRecord[];
   isLoading: boolean;
   error: string | null;
   loadProject(projectId: string): Promise<void>;
@@ -68,6 +82,10 @@ interface ProjectState {
   updateTransaction(transactionId: string, updates: UpdateTransactionInput): Promise<boolean>;
   deleteTransaction(transactionId: string): Promise<boolean>;
   updatePlotPrice(plotPrice: number): Promise<boolean>;
+  updateCategoryBudget(category: string, amount: number): Promise<boolean>;
+  addVendorOrder(input: Omit<VendorOrderRecord, "id" | "createdAt" | "projectId">): Promise<boolean>;
+  updateVendorOrder(orderId: string, updates: Partial<VendorOrderRecord>): Promise<boolean>;
+  deleteVendorOrder(orderId: string): Promise<boolean>;
 }
 
 export interface AddTransactionInput {
@@ -102,19 +120,19 @@ export interface UpdateTransactionInput {
   category?: string;
 }
 
-interface ProjectQueryRow extends ProjectsRow {
+interface ProjectQueryRow extends Omit<ProjectsRow, "category_budgets"> {
+  category_budgets?: Record<string, number> | null;
   material_transactions: Array<
     MaterialTransactionsRow & {
       phase?: string;
       materials_catalog: MaterialsCatalogRow | null;
     }
   > | null;
+  vendor_orders: Array<any> | null;
 }
 
 function toNumber(value: string | number | null | undefined): number {
-  if (typeof value === "number") {
-    return value;
-  }
+  if (typeof value === "number") return value;
   if (typeof value === "string") {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : 0;
@@ -122,7 +140,7 @@ function toNumber(value: string | number | null | undefined): number {
   return 0;
 }
 
-function normalizeProject(row: ProjectsRow): ProjectRecord {
+function normalizeProject(row: any): ProjectRecord {
   return {
     id: row.id,
     ownerId: row.owner_id,
@@ -132,6 +150,7 @@ function normalizeProject(row: ProjectsRow): ProjectRecord {
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    categoryBudgets: row.category_budgets || {},
   };
 }
 
@@ -164,15 +183,11 @@ function normalizeTransaction(
   };
 }
 
-function materialKey(transaction: MaterialTransactionRecord): string {
-  return transaction.catalogId ? transaction.catalogId : `custom:${transaction.materialName}`;
-}
-
 export function getMaterialSummaries(transactions: MaterialTransactionRecord[]): MaterialSummary[] {
   const groups = new Map<string, MaterialSummary>();
 
   for (const transaction of transactions) {
-    const key = materialKey(transaction);
+    const key = transaction.catalogId ? transaction.catalogId : `custom:${transaction.materialName}`;
     const totalCost = transaction.quantity * transaction.unitPrice;
     const existing = groups.get(key);
 
@@ -199,17 +214,10 @@ export function getMaterialSummaries(transactions: MaterialTransactionRecord[]):
   return Array.from(groups.values()).sort((left, right) => left.category.localeCompare(right.category) || left.name.localeCompare(right.name));
 }
 
-export function getTotalMaterialCost(transactions: MaterialTransactionRecord[]): number {
-  return transactions.reduce((sum, transaction) => sum + transaction.quantity * transaction.unitPrice, 0);
-}
-
-export function getGrandTotal(plotPrice: number, transactions: MaterialTransactionRecord[]): number {
-  return plotPrice + getTotalMaterialCost(transactions);
-}
-
 export const useProjectStore = create<ProjectState>((set, get) => ({
   activeProject: null,
   transactions: [],
+  vendorOrders: [],
   isLoading: false,
   error: null,
 
@@ -225,7 +233,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     const { data, error } = await supabase
       .from("projects")
       .select(
-        "id, owner_id, name, location, plot_price, status, created_at, updated_at, material_transactions(id, project_id, catalog_id, custom_item_name, custom_unit, quantity, unit_price, vendor_name, transaction_date, notes, phase, created_by, created_at, updated_at, materials_catalog(id, category, name, unit, is_active, created_at))",
+        "id, owner_id, name, location, plot_price, status, created_at, updated_at, category_budgets, material_transactions(id, project_id, catalog_id, custom_item_name, custom_unit, quantity, unit_price, vendor_name, transaction_date, notes, phase, created_by, created_at, updated_at, materials_catalog(id, category, name, unit, is_active, created_at)), vendor_orders(id, project_id, vendor_name, material, unit, ordered_qty, received_qty, amount_paid, created_at)"
       )
       .eq("id", projectId)
       .maybeSingle<ProjectQueryRow>();
@@ -239,9 +247,22 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
       normalizeTransaction(transaction, transaction.materials_catalog),
     );
 
+    const vendorOrders = (data.vendor_orders ?? []).map((row: any) => ({
+      id: row.id,
+      projectId: row.project_id,
+      vendorName: row.vendor_name,
+      material: row.material,
+      unit: row.unit,
+      orderedQty: toNumber(row.ordered_qty),
+      receivedQty: toNumber(row.received_qty),
+      amountPaid: toNumber(row.amount_paid),
+      createdAt: row.created_at,
+    }));
+
     set({
       activeProject: normalizeProject(data),
       transactions,
+      vendorOrders,
       isLoading: false,
       error: null,
     });
@@ -426,4 +447,109 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ error: null });
     return true;
   },
+
+  async updateCategoryBudget(category: string, amount: number) {
+    const supabase = getSupabaseBrowserClient();
+    
+    if (!supabase) {
+      set({ error: "Database client is not configured properly." });
+      return false;
+    }
+
+    const project = get().activeProject;
+    if (!project) {
+      return false;
+    }
+
+    const updatedBudgets = {
+      ...project.categoryBudgets,
+      [category]: amount,
+    };
+
+    set({ activeProject: { ...project, categoryBudgets: updatedBudgets } });
+
+    const { error } = await supabase
+      .from("projects")
+      .update({ category_budgets: updatedBudgets } as never)
+      .eq("id", project.id);
+
+    if (error) {
+      set({ activeProject: project, error: error.message });
+      return false;
+    }
+
+    set({ error: null });
+    return true;
+  },
+
+  async addVendorOrder(input) {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return false;
+    const projectId = get().activeProject?.id;
+    if (!projectId) return false;
+
+    const payload = {
+      project_id: projectId,
+      vendor_name: input.vendorName,
+      material: input.material,
+      unit: input.unit,
+      ordered_qty: input.orderedQty,
+      received_qty: input.receivedQty,
+      amount_paid: input.amountPaid,
+    };
+
+    const { data, error } = await supabase.from("vendor_orders").insert([payload as never]).select().single();
+    if (error || !data) {
+      set({ error: error?.message }); return false;
+    }
+
+    const newOrder: VendorOrderRecord = {
+      id: (data as any).id,
+      projectId: (data as any).project_id,
+      vendorName: (data as any).vendor_name,
+      material: (data as any).material,
+      unit: (data as any).unit,
+      orderedQty: toNumber((data as any).ordered_qty),
+      receivedQty: toNumber((data as any).received_qty),
+      amountPaid: toNumber((data as any).amount_paid),
+      createdAt: (data as any).created_at,
+    };
+
+    set({ vendorOrders: [newOrder, ...get().vendorOrders] });
+    return true;
+  },
+
+  async updateVendorOrder(orderId, updates) {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return false;
+    const snapshot = get().vendorOrders;
+    const current = snapshot.find((o) => o.id === orderId);
+    if (!current) return false;
+    
+    const nextOrder = { ...current, ...updates };
+    set({ vendorOrders: snapshot.map((o) => (o.id === orderId ? nextOrder : o)) });
+
+    const payload = {
+      vendor_name: nextOrder.vendorName,
+      material: nextOrder.material,
+      unit: nextOrder.unit,
+      ordered_qty: nextOrder.orderedQty,
+      received_qty: nextOrder.receivedQty,
+      amount_paid: nextOrder.amountPaid,
+    };
+
+    const { error } = await supabase.from("vendor_orders").update(payload as never).eq("id", orderId);
+    if (error) { set({ vendorOrders: snapshot, error: error.message }); return false; }
+    return true;
+  },
+
+  async deleteVendorOrder(orderId) {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return false;
+    const snapshot = get().vendorOrders;
+    set({ vendorOrders: snapshot.filter((o) => o.id !== orderId) });
+    const { error } = await supabase.from("vendor_orders").delete().eq("id", orderId);
+    if (error) { set({ vendorOrders: snapshot, error: error.message }); return false; }
+    return true;
+  }
 }));
