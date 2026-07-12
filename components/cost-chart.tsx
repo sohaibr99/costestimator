@@ -1,167 +1,136 @@
 "use client";
 
 import * as React from "react";
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { BarChart3, TrendingUp } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChevronDown, ChevronUp, BarChart3 } from "lucide-react";
+import { Card, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useProjectStore } from "@/store/useProjectStore";
 
-// Updated to accept both camelCase (frontend) and snake_case (database) formats
-export interface TransactionRecord {
-  id: string;
-  transactionDate?: string;
-  transaction_date?: string;
-  quantity: number;
-  unitPrice?: number;
-  unit_price?: number;
-}
-
-interface CostChartProps {
-  transactions?: TransactionRecord[];
-}
-
-const formatPKR = (value: number) => {
-  return new Intl.NumberFormat("en-PK", {
-    style: "currency",
-    currency: "PKR",
-    maximumFractionDigits: 0,
-  }).format(value);
-};
-
-export function CostChart({ transactions = [] }: CostChartProps) {
-  const [viewType, setViewType] = React.useState<"daily" | "cumulative">("cumulative");
+export function CostChart() {
+  const activeProject = useProjectStore((state) => state.activeProject);
+  const transactions = useProjectStore((state) => state.transactions);
+  
+  // New state to manage whether the graph is open or closed
+  const [isExpanded, setIsExpanded] = React.useState(false);
 
   const chartData = React.useMemo(() => {
-    if (!transactions || transactions.length === 0) return [];
+    const dataMap = new Map<string, { name: string; spent: number; estimated: number }>();
 
-    const groupedCosts = transactions.reduce((acc, current) => {
-      // Safely grab the date and price regardless of which format is passed
-      const date = current.transactionDate || current.transaction_date;
-      const price = current.unitPrice || current.unit_price || 0;
-      
-      if (!date) return acc;
+    // 1. Add estimated budgets
+    if (activeProject?.categoryBudgets) {
+      Object.entries(activeProject.categoryBudgets).forEach(([name, estimated]) => {
+        if (estimated > 0) {
+          dataMap.set(name, { name, spent: 0, estimated });
+        }
+      });
+    }
 
-      const cost = current.quantity * price;
-      acc[date] = (acc[date] || 0) + cost;
-      return acc;
-    }, {} as Record<string, number>);
-
-    const sortedDates = Object.keys(groupedCosts).sort();
-
-    let runningTotal = 0;
-    return sortedDates.map((date) => {
-      runningTotal += groupedCosts[date];
-      
-      const dateObj = new Date(date);
-      const displayDate = dateObj.toLocaleDateString("en-PK", { month: "short", day: "numeric" });
-
-      return {
-        rawDate: date,
-        displayDate,
-        dailyCost: groupedCosts[date],
-        cumulativeCost: runningTotal,
-      };
+    // 2. Add actual spend
+    transactions.forEach((t) => {
+      const spent = t.quantity * t.unitPrice;
+      if (dataMap.has(t.materialName)) {
+        dataMap.get(t.materialName)!.spent += spent;
+      } else {
+        dataMap.set(t.materialName, { name: t.materialName, spent, estimated: 0 });
+      }
     });
-  }, [transactions]);
 
-  const totalSpent = chartData.length > 0 ? chartData[chartData.length - 1].cumulativeCost : 0;
+    // 3. Filter out items with 0 spent and 0 estimated, and sort by highest total value
+    return Array.from(dataMap.values())
+      .filter(d => d.spent > 0 || d.estimated > 0)
+      .sort((a, b) => Math.max(b.spent, b.estimated) - Math.max(a.spent, a.estimated));
+  }, [activeProject, transactions]);
 
-  if (transactions.length === 0) {
-    return (
-      <Card className="border-dashed shadow-none">
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center text-foreground/50">
-          <BarChart3 className="mb-2 h-8 w-8 opacity-50" />
-          <p>No transactions yet. Add a purchase to see your cash flow graph.</p>
-        </CardContent>
-      </Card>
-    );
+  // Hide the chart entirely if there is no data to show
+  if (chartData.length === 0) {
+    return null;
   }
 
+  // Find the absolute highest value to scale the progress bars proportionally across the screen
+  const maxChartValue = Math.max(...chartData.map(d => Math.max(d.spent, d.estimated)), 1);
+
   return (
-    <Card className="shadow-sm">
-      <CardHeader className="flex flex-col gap-4 border-b border-border/50 pb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <CardTitle className="text-xl">Cash Flow</CardTitle>
-          <CardDescription>Total spent: <span className="font-semibold text-foreground">{formatPKR(totalSpent)}</span></CardDescription>
+    <Card className="shadow-sm border-slate-200 overflow-hidden transition-all duration-300">
+      
+      {/* Clickable Header to toggle the graph */}
+      <div 
+        className="flex cursor-pointer items-center justify-between p-6 hover:bg-slate-50/50 transition-colors"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="space-y-1.5">
+          <CardTitle className="text-xl flex items-center gap-2">
+            <BarChart3 className="h-5 w-5 text-blue-600" />
+            Budget vs. Actual Spend
+          </CardTitle>
+          <CardDescription>Visual comparison of your estimated budgets against actual cash spent.</CardDescription>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 p-1">
-          <Button
-            variant={viewType === "cumulative" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setViewType("cumulative")}
-            className="gap-2"
-          >
-            <TrendingUp className="h-4 w-4" />
-            Cumulative
-          </Button>
-          <Button
-            variant={viewType === "daily" ? "secondary" : "ghost"}
-            size="sm"
-            onClick={() => setViewType("daily")}
-            className="gap-2"
-          >
-            <BarChart3 className="h-4 w-4" />
-            Daily
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-6">
-        <div className="h-[400px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            {viewType === "cumulative" ? (
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="colorCumulative" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#064e3b" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#064e3b" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                <XAxis dataKey="displayDate" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tickFormatter={(value) => `Rs ${value / 1000}k`} 
-                  fontSize={12} 
-                  width={65}
-                />
-                <Tooltip 
-                  formatter={(value: any) => [formatPKR(Number(value)), "Total Spent"]}
-                  labelStyle={{ color: 'black', fontWeight: 'bold', marginBottom: '4px' }}
-                  contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="cumulativeCost" 
-                  stroke="#064e3b" 
-                  strokeWidth={3}
-                  fillOpacity={1} 
-                  fill="url(#colorCumulative)" 
-                />
-              </AreaChart>
-            ) : (
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
-                <XAxis dataKey="displayDate" axisLine={false} tickLine={false} tickMargin={10} fontSize={12} />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tickFormatter={(value) => `Rs ${value / 1000}k`} 
-                  fontSize={12} 
-                  width={65}
-                />
-                <Tooltip 
-                  formatter={(value: any) => [formatPKR(Number(value)), "Daily Expense"]}
-                  cursor={{ fill: '#f3f4f6' }}
-                  labelStyle={{ color: 'black', fontWeight: 'bold', marginBottom: '4px' }}
-                  contentStyle={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                />
-                <Bar dataKey="dailyCost" fill="#064e3b" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            )}
-          </ResponsiveContainer>
-        </div>
-      </CardContent>
+        <Button variant="ghost" size="icon" className="shrink-0 rounded-full hover:bg-slate-200/50">
+          {isExpanded ? <ChevronUp className="h-5 w-5 text-slate-600" /> : <ChevronDown className="h-5 w-5 text-slate-600" />}
+        </Button>
+      </div>
+
+      {/* Conditionally rendered Chart Content */}
+      {isExpanded && (
+        <CardContent className="space-y-7 border-t border-slate-100 pt-6 bg-slate-50/30">
+          {chartData.map((item) => {
+            // Calculate percentages relative to the largest bar on the chart
+            const spentPercent = (item.spent / maxChartValue) * 100;
+            const estimatedPercent = (item.estimated / maxChartValue) * 100;
+            
+            const isOverBudget = item.estimated > 0 && item.spent > item.estimated;
+
+            return (
+              <div key={item.name} className="flex flex-col gap-2">
+                
+                {/* Labels Row */}
+                <div className="flex items-end justify-between">
+                  <span className="font-bold text-slate-900">{item.name}</span>
+                  <div className="text-right flex flex-col sm:flex-row sm:gap-2 sm:items-center">
+                    <span className={`text-xs sm:text-sm ${isOverBudget ? "text-red-600 font-bold" : "text-emerald-700 font-semibold"}`}>
+                      Spent: Rs {item.spent.toLocaleString()}
+                    </span>
+                    <span className="hidden sm:inline text-slate-300">|</span>
+                    <span className="text-[10px] sm:text-xs text-blue-600 font-semibold uppercase tracking-wider">
+                      Est: {item.estimated > 0 ? `Rs ${item.estimated.toLocaleString()}` : "Not set"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Bars Row */}
+                <div className="space-y-2">
+                  {/* Estimated Budget Bar */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-[50px] text-[9px] font-bold uppercase text-blue-400 tracking-wider text-right">Budget</div>
+                    <div className="flex-1 h-3 w-full rounded-full bg-slate-100">
+                      <div 
+                        className="h-full rounded-full bg-blue-400 transition-all duration-700 ease-out" 
+                        style={{ width: `${Math.min(estimatedPercent, 100)}%` }} 
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Actual Spent Bar */}
+                  <div className="flex items-center gap-3">
+                    <div className={`w-[50px] text-[9px] font-bold uppercase tracking-wider text-right ${isOverBudget ? 'text-red-500' : 'text-emerald-600'}`}>Spent</div>
+                    <div className="flex-1 h-3 w-full rounded-full bg-slate-100 relative">
+                      <div 
+                        className={`h-full rounded-full transition-all duration-700 ease-out shadow-sm ${isOverBudget ? 'bg-red-500' : 'bg-emerald-500'}`} 
+                        style={{ width: `${Math.min(spentPercent, 100)}%` }} 
+                      />
+                      
+                      {/* Visual warning dot if over budget */}
+                      {isOverBudget && (
+                        <div className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-red-600 border-2 border-white animate-pulse" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+              </div>
+            );
+          })}
+        </CardContent>
+      )}
     </Card>
   );
 }
