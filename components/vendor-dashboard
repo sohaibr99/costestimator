@@ -32,17 +32,18 @@ export function VendorDashboard() {
     setOrderedQty(""); setReceivedQty("0"); setAmountPaid("0");
     setIsModalOpen(true);
   };
-
-const handleOpenEdit = function(order: any) {
-  setEditingOrder(order);
-  setVendorName(order.vendorName);
-  setMaterial(order.material);
-  setUnit(order.unit);
-  setOrderedQty(order.orderedQty.toString());
-  setReceivedQty(order.receivedQty.toString());
-  setAmountPaid(order.amountPaid.toString());
-  setIsModalOpen(true);
-};
+  
+// @ts-ignore
+  const handleOpenEdit = (order) => {
+    setEditingOrder(order);
+    setVendorName(order.vendorName);
+    setMaterial(order.material);
+    setUnit(order.unit);
+    setOrderedQty(order.orderedQty.toString());
+    setReceivedQty(order.receivedQty.toString());
+    setAmountPaid(order.amountPaid.toString());
+    setIsModalOpen(true);
+  };
 
   const handleSave = async () => {
     if (!vendorName || !material || !orderedQty) return;
