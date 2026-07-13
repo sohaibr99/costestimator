@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useProjectStore } from "@/store/useProjectStore";
-import { VendorOrderRecord } from "@/store/useProjectStore";
 export function VendorDashboard() {
   const vendorOrders = useProjectStore((state) => state.vendorOrders) || [];
   const addVendorOrder = useProjectStore((state) => state.addVendorOrder);
@@ -16,7 +15,7 @@ export function VendorDashboard() {
   const deleteVendorOrder = useProjectStore((state) => state.deleteVendorOrder);
 
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [editingOrder, setEditingOrder] = React.useState<VendorOrderRecord | null>(null);
+  const [editingOrder, setEditingOrder] = React.useState<any>(null);
 
   // Form State
   const [vendorName, setVendorName] = React.useState("");
